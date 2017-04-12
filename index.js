@@ -54,6 +54,7 @@ function Browserify (files, opts) {
     opts.dedupe = opts.dedupe === false ? false : true;
 
     self._external = [];
+    this._externalLookup = {};
     self._exclude = [];
     self._ignore = [];
     self._expose = {};
@@ -258,6 +259,10 @@ Browserify.prototype.external = function (file, opts) {
     var basedir = defined(opts.basedir, process.cwd());
     this._external.push(file);
     this._external.push('/' + relativePath(basedir, file));
+    if (opts.lookupID) {
+        this._externalLookup[file] = opts.lookupID;
+        this._externalLookup['/' + relativePath(basedir, file)] = opts.lookupID;
+    }
     return this;
 };
 
@@ -697,6 +702,12 @@ Browserify.prototype._label = function (opts) {
 
             var afile = path.resolve(path.dirname(row.file), key);
             var rfile = '/' + relativePath(basedir, afile);
+            // Give priority to lookupID option in external.
+            var lookupID = self._externalLookup[rfile] || self._externalLookup[afile];
+            if (lookupID) {
+                row.deps[key] = lookupID;
+                return;
+            }
             if (self._external.indexOf(rfile) >= 0) {
                 row.deps[key] = rfile;
             }
